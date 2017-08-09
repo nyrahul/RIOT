@@ -20,6 +20,8 @@ USEMODULE += auto_init_gnrc_netif
 # Specify the mandatory networking modules for IPv6 and UDP
 USEMODULE += gnrc_ipv6_router_default
 USEMODULE += gnrc_udp
+USEMODULE += netdev_whitefield
+USEMODULE += netdev_ieee802154
 # Add a routing protocol
 USEMODULE += gnrc_rpl
 USEMODULE += auto_init_gnrc_rpl

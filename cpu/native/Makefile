@@ -6,6 +6,9 @@ DIRS += vfs
 ifneq (,$(filter netdev_tap,$(USEMODULE)))
 	DIRS += netdev_tap
 endif
+ifneq (,$(filter netdev_whitefield,$(USEMODULE)))
+	DIRS += netdev_whitefield
+endif
 ifneq (,$(filter mtd_native,$(USEMODULE)))
 	DIRS += mtd
 endif

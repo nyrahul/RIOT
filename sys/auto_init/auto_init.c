@@ -221,6 +221,11 @@ void auto_init(void)
     auto_init_netdev_tap();
 #endif
 
+#ifdef MODULE_NETDEV_WHITEFIELD
+    extern void auto_init_netdev_whitefield(void);
+    auto_init_netdev_whitefield();
+#endif
+
 #ifdef MODULE_NORDIC_SOFTDEVICE_BLE
     extern void gnrc_nordic_ble_6lowpan_init(void);
     gnrc_nordic_ble_6lowpan_init();

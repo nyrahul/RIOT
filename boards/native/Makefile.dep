@@ -1,5 +1,7 @@
+ifeq (,$(filter netdev_whitefield,$(USEMODULE)))
 ifneq (,$(filter netdev_default gnrc_netdev_default,$(USEMODULE)))
     USEMODULE += netdev_tap
+endif
 endif
 
 ifneq (,$(filter mtd,$(USEMODULE)))

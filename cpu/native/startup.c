@@ -67,6 +67,11 @@ const char *_native_unix_socket_path = NULL;
 
 netdev_tap_params_t netdev_tap_params[NETDEV_TAP_MAX];
 #endif
+#ifdef MODULE_NETDEV_WHITEFIELD
+#include "netdev_whitefield_params.h"
+
+netdev_whitefield_params_t netdev_whitefield_params[NETDEV_WHITEFIELD_MAX];
+#endif
 #ifdef MODULE_MTD_NATIVE
 #include "board.h"
 #include "mtd_native.h"
@@ -78,6 +83,9 @@ netdev_tap_params_t netdev_tap_params[NETDEV_TAP_MAX];
 static const char short_opts[] = ":hi:s:deEoc:"
 #ifdef MODULE_MTD_NATIVE
     "m:"
+#endif
+#ifdef MODULE_NETDEV_WHITEFIELD
+    "w:"
 #endif
 #ifdef MODULE_CAN_LINUX
     "n:"
@@ -95,6 +103,9 @@ static const struct option long_opts[] = {
     { "uart-tty", required_argument, NULL, 'c' },
 #ifdef MODULE_MTD_NATIVE
     { "mtd", required_argument, NULL, 'm' },
+#endif
+#ifdef MODULE_NETDEV_WHITEFIELD
+    { "whitefield", required_argument, NULL, 'w' },
 #endif
 #ifdef MODULE_CAN_LINUX
     { "can", required_argument, NULL, 'n' },
@@ -259,6 +270,11 @@ void usage_exit(int status)
 "    -m <mtd>, --mtd=<mtd>\n"
 "       specify the file name of mtd emulated device\n");
 #endif
+#ifdef MODULE_NETDEV_WHITEFIELD
+    real_printf(
+"    -w <devid>, --whitefield=devid\n"
+"       specify the node id fore whitefield simulated device\n");
+#endif
 #if defined(MODULE_CAN_LINUX)
     real_printf(
 "    -n <ifnum>:<ifname>, --can <ifnum>:<ifname>\n"
@@ -339,6 +355,11 @@ __attribute__((constructor)) static void startup(int argc, char **argv, char **e
 #ifdef MODULE_MTD_NATIVE
             case 'm':
                 ((mtd_native_dev_t *)mtd0)->fname = strndup(optarg, PATH_MAX - 1);
+                break;
+#endif
+#ifdef MODULE_NETDEV_WHITEFIELD
+            case 'w':
+                netdev_whitefield_params[0].nodeid = atoi(optarg);
                 break;
 #endif
 #if defined(MODULE_CAN_LINUX)
