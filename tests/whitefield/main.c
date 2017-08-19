@@ -14,11 +14,11 @@
  */
 
 #include <stdio.h>
-
 #include "net/ipv6/addr.h"
 #include "shell.h"
 #include "shell_commands.h"
 #include "msg.h"
+//#include "whitefield.h"
 
 #define	MAIN_QUEUE_SIZE	(8)
 static msg_t _main_msg_queue[MAIN_QUEUE_SIZE];

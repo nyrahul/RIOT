@@ -15,9 +15,9 @@
 
 #include "net/gnrc.h"
 #include "net/gnrc/nettype.h"
+#include "net/ieee802154.h"
 
-#define ENABLE_DEBUG    (1)
-#include "debug.h"
+#include "whitefield.h"
 
 #if defined(MODULE_OD) && ENABLE_DEBUG
 #include "od.h"
@@ -39,7 +39,7 @@ static void _handle_raw_sixlowpan(ble_mac_inbuf_t *inbuf)
             GNRC_NETTYPE_SIXLOWPAN);
 
     if(!pkt) {
-        DEBUG("_handle_raw_sixlowpan(): no space left in packet buffer.\n");
+        LOG("_handle_raw_sixlowpan(): no space left in packet buffer.\n");
         return;
     }
 
@@ -50,14 +50,14 @@ static void _handle_raw_sixlowpan(ble_mac_inbuf_t *inbuf)
             GNRC_NETTYPE_NETIF);
 
     if (netif_hdr == NULL) {
-        DEBUG("_handle_raw_sixlowpan(): no space left in packet buffer.\n");
+        LOG("_handle_raw_sixlowpan(): no space left in packet buffer.\n");
         gnrc_pktbuf_release(pkt);
         return;
     }
 
     ((gnrc_netif_hdr_t *)netif_hdr->data)->if_pid = gnrc_whitefield_6lowpan_pid;
 
-    DEBUG("_handle_raw_sixlowpan(): received packet from %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x "
+    LOG("_handle_raw_sixlowpan(): received packet from %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x "
             "of length %d\n",
             inbuf->src[0], inbuf->src[1], inbuf->src[2], inbuf->src[3], inbuf->src[4],
             inbuf->src[5], inbuf->src[6], inbuf->src[7], inbuf->len);
@@ -69,7 +69,7 @@ static void _handle_raw_sixlowpan(ble_mac_inbuf_t *inbuf)
 
     /* throw away packet if no one is interested */
     if (!gnrc_netapi_dispatch_receive(pkt->type, GNRC_NETREG_DEMUX_CTX_ALL, pkt)) {
-        DEBUG("_handle_raw_sixlowpan: unable to forward packet of type %i\n", pkt->type);
+        LOG("_handle_raw_sixlowpan: unable to forward packet of type %i\n", pkt->type);
         gnrc_pktbuf_release(pkt);
     }
 }
@@ -80,7 +80,7 @@ static int _send(gnrc_pktsnip_t *pkt)
 	(void)pkt;
 #if 0
     if (pkt == NULL) {
-        DEBUG("_send_ble: pkt was NULL\n");
+        LOG("_send_ble: pkt was NULL\n");
         return -EINVAL;
     }
 
@@ -89,7 +89,7 @@ static int _send(gnrc_pktsnip_t *pkt)
     uint8_t *dst;
 
     if (ble_mac_busy_tx) {
-        DEBUG("_send(): ble_mac_busy_tx\n");
+        LOG("_send(): ble_mac_busy_tx\n");
         return -EBUSY;
     }
 
@@ -97,7 +97,7 @@ static int _send(gnrc_pktsnip_t *pkt)
     unsigned len = 0;
 
     if (pkt->type != GNRC_NETTYPE_NETIF) {
-        DEBUG("_send_ble: first header is not generic netif header\n");
+        LOG("_send_ble: first header is not generic netif header\n");
         return -EBADMSG;
     }
 
@@ -141,15 +141,15 @@ static int _handle_get(gnrc_netapi_opt_t *_opt)
             /* -ENOTSUP */
             break;
         case NETOPT_ADDRESS_LONG:
-//            assert(_opt->data_len >= BLE_SIXLOWPAN_L2_ADDR_LEN);
+              assert(_opt->data_len >= IEEE802154_LONG_ADDRESS_LEN);
  //           memcpy(value, _own_mac_addr, BLE_SIXLOWPAN_L2_ADDR_LEN);
   //          value[0] = IPV6_IID_FLIP_VALUE;
-   //         res = BLE_SIXLOWPAN_L2_ADDR_LEN;
+              res = IEEE802154_LONG_ADDRESS_LEN;
             break;
         case NETOPT_ADDR_LEN:
         case NETOPT_SRC_LEN:
             assert(_opt->data_len == sizeof(uint16_t));
-//            *((uint16_t *)value) = BLE_SIXLOWPAN_L2_ADDR_LEN;
+            *((uint16_t *)value) = IEEE802154_LONG_ADDRESS_LEN;
             res = sizeof(uint16_t);
             break;
 #ifdef MODULE_GNRC
@@ -184,7 +184,7 @@ static void *_gnrc_whitefield_6lowpan_thread(void *args)
 {
     (void)args;
 
-    DEBUG("gnrc_whitefield_6lowpan: starting thread\n");
+    LOG("gnrc_whitefield_6lowpan: starting thread\n");
 
     gnrc_whitefield_6lowpan_pid = thread_getpid();
 
@@ -200,31 +200,31 @@ static void *_gnrc_whitefield_6lowpan_thread(void *args)
 
     /* start the event loop */
     while (1) {
-//        DEBUG("gnrc_whitefield_6lowpan: waiting for incoming messages\n");
+//        LOG("gnrc_whitefield_6lowpan: waiting for incoming messages\n");
         msg_receive(&msg);
         /* dispatch NETDEV and NETAPI messages */
         switch (msg.type) {
 #if 0
             case BLE_EVENT_RX_DONE:
                 {
-                    DEBUG("ble rx:\n");
+                    LOG("ble rx:\n");
                     _handle_raw_sixlowpan(msg.content.ptr);
                     ble_mac_busy_rx = 0;
                     break;
                 }
 #endif
             case GNRC_NETAPI_MSG_TYPE_SND:
-                DEBUG("gnrc_whitefield_6lowpan: GNRC_NETAPI_MSG_TYPE_SND received\n");
+                LOG("gnrc_whitefield_6lowpan: GNRC_NETAPI_MSG_TYPE_SND received\n");
                 _send(msg.content.ptr);
                 break;
             case GNRC_NETAPI_MSG_TYPE_SET:
                 /* read incoming options */
                 opt = msg.content.ptr;
-                DEBUG("gnrc_whitefield_6lowpan: GNRC_NETAPI_MSG_TYPE_SET received. opt=%s\n",
+                LOG("gnrc_whitefield_6lowpan: GNRC_NETAPI_MSG_TYPE_SET received. opt=%s\n",
                       netopt2str(opt->opt));
                 /* set option for device driver */
                 res = ENOTSUP;
-                DEBUG("gnrc_whitefield_6lowpan: response of netdev->set: %i\n", res);
+                LOG("gnrc_whitefield_6lowpan: response of netdev->set: %i\n", res);
                 /* send reply to calling thread */
                 reply.type = GNRC_NETAPI_MSG_TYPE_ACK;
                 reply.content.value = (uint32_t)res;
@@ -233,17 +233,17 @@ static void *_gnrc_whitefield_6lowpan_thread(void *args)
             case GNRC_NETAPI_MSG_TYPE_GET:
                 /* read incoming options */
                 opt = msg.content.ptr;
-                DEBUG("gnrc_whitefield_6lowpan: GNRC_NETAPI_MSG_TYPE_GET received. opt=%s\n",
+                LOG("gnrc_whitefield_6lowpan: GNRC_NETAPI_MSG_TYPE_GET received. opt=%s\n",
                       netopt2str(opt->opt));
                 res = _handle_get(opt);
-                DEBUG("gnrc_whitefield_6lowpan: response of netdev->get: %i\n", res);
+                LOG("gnrc_whitefield_6lowpan: response of netdev->get: %i\n", res);
                 /* send reply to calling thread */
                 reply.type = GNRC_NETAPI_MSG_TYPE_ACK;
                 reply.content.value = (uint32_t)res;
                 msg_reply(&msg, &reply);
                 break;
             default:
-                DEBUG("gnrc_whitefield_6lowpan: Unknown command %" PRIu16 "\n", msg.type);
+                LOG("gnrc_whitefield_6lowpan: Unknown command %" PRIu16 "\n", msg.type);
                 break;
         }
     }
@@ -253,11 +253,15 @@ static void *_gnrc_whitefield_6lowpan_thread(void *args)
 
 void gnrc_whitefield_6lowpan_init(void)
 {
+	if(wf_get_nodeid() == 0xffff) {
+		ERR("Nodeid not passed white execution. -w <nodeid>\n");
+		abort();
+	}
     kernel_pid_t res = thread_create(_stack, sizeof(_stack), WF_PRIO,
                         THREAD_CREATE_STACKTEST,
                         _gnrc_whitefield_6lowpan_thread, NULL,
                         "ble");
     assert(res > 0);
-	DEBUG("Whitefield 6Lowpan Thread created.\n");
+	LOG("Whitefield 6Lowpan Thread created. Nodeid=0x%x\n", wf_get_nodeid());
     (void)res;
 }

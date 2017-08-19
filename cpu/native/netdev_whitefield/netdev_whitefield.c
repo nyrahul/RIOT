@@ -61,23 +61,59 @@ static inline void _isr(netdev_t *netdev)
 #endif
 }
 
+static int _get_addr(netdev_whitefield_t *wfdev, uint8_t *value)
+{
+	uint16_t nworderid=htons(wfdev->nodeid);
+	memcpy(value, &nworderid, sizeof(nworderid));
+	return 0;
+}
+
 static int _get(netdev_t *dev, netopt_t opt, void *value, size_t max_len)
 {
 	netdev_whitefield_t *wfdev=(netdev_whitefield_t*)dev;
     int res = 0;
 
-	DEBUG("whitefield get called opt:%d, max_len:%d\n", opt, max_len);
-	res = netdev_ieee802154_get(&wfdev->dev802154, opt, value, max_len);
+	switch(opt) {
+		case NETOPT_ADDRESS:
+			assert(max_len >= IEEE802154_SHORT_ADDRESS_LEN);
+			_get_addr(wfdev, value);
+			return IEEE802154_SHORT_ADDRESS_LEN;
+
+		case NETOPT_ADDRESS_LONG:
+			assert((max_len >= IEEE802154_LONG_ADDRESS_LEN))
+			memset(value, 0, IEEE802154_LONG_ADDRESS_LEN);
+			_get_addr(wfdev, (uint8_t*)value+6);
+			return IEEE802154_LONG_ADDRESS_LEN;
+
+		default:
+			res = netdev_ieee802154_get(&wfdev->dev802154, opt, value, max_len);
+			break;
+	}
     return res;
 }
 
-static int _set(netdev_t *dev, netopt_t opt, void *value, size_t value_len)
+static int _set(netdev_t *dev, netopt_t opt, void *val, size_t val_len)
 {
 	netdev_whitefield_t *wfdev=(netdev_whitefield_t*)dev;
     int res = 0;
 
-	DEBUG("whitefield set called opt:%d, value_len:%d\n", opt, value_len);
-	res = netdev_ieee802154_set(&wfdev->dev802154, opt, value, value_len);
+	switch(opt) {
+		case NETOPT_ADDRESS:
+			assert(val_len == IEEE802154_SHORT_ADDRESS_LEN);
+			DEBUG("DIDNT EXPECT! Assigning new short address\n");
+			memcpy(wfdev->dev802154.short_addr, val, val_len);
+			memcpy(&wfdev->nodeid, val, val_len);
+			return IEEE802154_SHORT_ADDRESS_LEN;
+
+		case NETOPT_ADDRESS_LONG:
+			DEBUG("DIDNT EXPECT LONG ADDRESS ASSIGNMENT!\n");
+			return IEEE802154_LONG_ADDRESS_LEN;
+
+		default:
+			res = netdev_ieee802154_set(&wfdev->dev802154, opt, val, val_len);
+			break;
+	}
+
     return res;
 }
 
@@ -110,10 +146,16 @@ static int _send(netdev_t *netdev, const struct iovec *vector, unsigned n)
     if (dev->event_callback) {
         dev->event_callback(dev, NETDEV_EVENT_TX_COMPLETE);
     }
-	(void)n;
-	(void)vector;
-    DEBUG("whitefield send called n=%d\n", n);
-    return -1;
+    size_t bytes = 0;
+    for (unsigned i = 0; i < n; i++) {
+        bytes += vector->iov_len;
+        vector++;
+    }
+#ifdef MODULE_NETSTATS_L2
+    netdev->stats.tx_bytes += bytes;
+#endif
+    DEBUG("whitefield send called bytes=%d\n", bytes);
+    return bytes;
 }
 
 void netdev_whitefield_setup(netdev_whitefield_t *wfdev, const netdev_whitefield_params_t *params) {
@@ -137,6 +179,13 @@ static int _init(netdev_t *netdev)
 #ifdef MODULE_NETSTATS_L2
     memset(&dev->stats, 0, sizeof(netstats_t));
 #endif
+#ifdef MODULE_GNRC_SIXLOWPAN
+    wfdev->dev802154.proto = GNRC_NETTYPE_SIXLOWPAN;
+#elif MODULE_GNRC
+    wfdev->dev802154.proto = GNRC_NETTYPE_UNDEF;
+#endif
+    wfdev->dev802154.seq = 0;
+    wfdev->dev802154.flags = 0;
     DEBUG("whitefield initialized.\n");
     return 0;
 }
