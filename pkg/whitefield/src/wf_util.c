@@ -1,3 +1,6 @@
+#define	_WF_UTIL_C_
+
+#include <string.h>
 #include "whitefield.h"
 
 #include "net/ieee802154.h"
@@ -7,6 +10,16 @@ uint16_t wf_get_nodeid(void)
 {
 	return wf_nodeid;
 }
+
+int wf_get_longaddr(uint8_t *value, unsigned int val_len)
+{
+	uint16_t nworderid=htons(wf_nodeid);
+	assert(val_len >= IEEE802154_LONG_ADDRESS_LEN);
+	memset(value, 0, val_len);
+	memcpy(value+6, &nworderid, sizeof(nworderid));
+	return 0;
+}
+
 
 #if 0
 int usage(char *cmd)

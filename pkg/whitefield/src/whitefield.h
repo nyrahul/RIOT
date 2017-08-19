@@ -5,6 +5,11 @@
 #include <unistd.h>
 #include <stdint.h>
 
+/*
+	Configuration Options
+*/
+#define	WF_MAX_PKT_SZ	127
+
 typedef struct _node_info_ {
 	uint16_t id;	//Whitefield Node Index
 }wf_node_info_t;
@@ -18,6 +23,6 @@ typedef struct _node_info_ {
 #define	LOG(...)	DEBUG(__VA_ARGS__)
 
 uint16_t wf_get_nodeid(void);
-int wf_parse_cmdline(int argc, char **argv);
+int wf_get_longaddr(uint8_t *value, unsigned int val_len);
 
 #endif	//	_WHITEFIELD_H_

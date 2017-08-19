@@ -1,0 +1,1 @@
+-Configurable MAX_PACKET_SIZE ... currently the default is 127. But this can be made runtime.
