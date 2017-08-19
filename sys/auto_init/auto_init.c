@@ -231,6 +231,11 @@ void auto_init(void)
     gnrc_nordic_ble_6lowpan_init();
 #endif
 
+#ifdef MODULE_WHITEFIELD
+    extern void gnrc_whitefield_6lowpan_init(void);
+    gnrc_whitefield_6lowpan_init();
+#endif
+
 #ifdef MODULE_NRFMIN
     extern void gnrc_nrfmin_init(void);
     gnrc_nrfmin_init();
